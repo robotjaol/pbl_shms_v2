@@ -302,11 +302,11 @@ void loop()
 #include <Adafruit_SSD1306.h>
 #include <Adafruit_GFX.h>
 
-#define DHTPIN 6 // Pin DHT22
+#define DHTPIN 6            // Pin DHT22
 #define DHTTYPE DHT22
 
-#define STRAIN_GAUGE_DOUT 7 // Pin data untuk HX711 -> Not Used
-#define STRAIN_GAUGE_SCK 8  // Pin clock untuk HX711 -> Not Used
+#define STRAIN_GAUGE_DOUT 7 // Pin data HX711 -> Not Used
+#define STRAIN_GAUGE_SCK 8  // Pin clock HX711 -> Not Used
 #define STRAIN_GAUGE_PIN 10 // Pin Strain Gauge Module Y3 BF350-3AA -> Used
 
 #define MPU6050_ADDRESS 0x68
