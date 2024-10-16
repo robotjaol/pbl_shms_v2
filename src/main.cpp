@@ -305,19 +305,19 @@ void loop()
 #define DHTPIN 6            // Pin DHT22
 #define DHTTYPE DHT22
 
-#define STRAIN_GAUGE_DOUT 7 // Pin data HX711 -> Not Used
-#define STRAIN_GAUGE_SCK 8  // Pin clock HX711 -> Not Used
+// #define STRAIN_GAUGE_DOUT 7 // Pin data HX711 -> Not Used
+// #define STRAIN_GAUGE_SCK 8  // Pin clock HX711 -> Not Used
 #define STRAIN_GAUGE_PIN 10 // Pin Strain Gauge Module Y3 BF350-3AA -> Used
 
 #define MPU6050_ADDRESS 0x68
 #define ADXL345_ADDRESS 0x53
-#define SDA 21
-#define SCL 22
+#define SDA 8
+#define SCL 9
 
 #define RESET_MPU 2
 #define RESET_ADXL345 3
 #define RESET_OLED 4
-#define OLED_RESET 9
+#define OLED_RESET 7
 
 #define INDICATOR 5
 
@@ -334,7 +334,7 @@ public:
   {
     adxl.begin(ADXL345_ADDRESS);
     mpu.begin(MPU6050_ADDRESS);
-    strainGauge.begin(STRAIN_GAUGE_DOUT, STRAIN_GAUGE_SCK);
+    // strainGauge.begin(STRAIN_GAUGE_DOUT, STRAIN_GAUGE_SCK);
     dht.begin();
   }
 
