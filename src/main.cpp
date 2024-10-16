@@ -469,7 +469,7 @@ public:
     {
       Serial.println("Mencoba menyambung kembali ke WiFi...");
       WiFi.reconnect();
-      vTaskDelay(1000); // reconnect setiap 1 detik
+      vTaskDelay(1000); // reconnect 1 detik
     }
     Serial.println("Terhubung kembali ke WiFi!");
   }
@@ -503,7 +503,7 @@ void TaskSendData(void *pvParameters)
     wifiManager.sendData(sensorManager.getGyroX(), sensorManager.getGyroY(), sensorManager.getGyroZ(),
                          sensorManager.getAccelX(), sensorManager.getAccelY(), sensorManager.getAccelZ(),
                          sensorManager.getStrainValue(), sensorManager.getTemperature(), sensorManager.getHumidity());
-    vTaskDelay(pdMS_TO_TICKS(1000)); // Kirim data setiap detik
+    vTaskDelay(pdMS_TO_TICKS(1000)); // Send 1s
   }
 }
 
@@ -535,7 +535,7 @@ void TaskUpdateDisplay(void *pvParameters)
     display.println(sensorManager.getHumidity());
     display.display();
 
-    vTaskDelay(pdMS_TO_TICKS(2000)); // Update display setiap 2 detik
+    vTaskDelay(pdMS_TO_TICKS(1000)); // Refresh Display 1s
   }
 }
 
