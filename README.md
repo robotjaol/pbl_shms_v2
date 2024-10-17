@@ -13,7 +13,7 @@
 #define OLED_RESET -1
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-#define DHTPIN 15
+#define DHTPIN 1
 #define DHTTYPE DHT22
 DHT dht(DHTPIN, DHTTYPE);
 
@@ -25,7 +25,9 @@ Adafruit_MPU6050 mpu;
 #define ADXL_SCL 9
 Adafruit_ADXL345_Unified adxl = Adafruit_ADXL345_Unified(12345);
 
-#define STRAIN_PIN 34
+#define STRAIN_PIN 20
+
+#define VOLTAGE_SENSOR 21
 
 const char *ssid = "DTEO-VOKASI";
 const char *password = "TEO123456";
@@ -148,7 +150,7 @@ void loop() {
 #include <Adafruit_ADXL345_U.h>
 #include <DHT.h>
 
-#define DHTPIN 6
+#define DHTPIN 1
 #define DHTTYPE DHT22
 #define MPU6050_ADDRESS 0x68
 #define ADXL345_ADDRESS 0x53
