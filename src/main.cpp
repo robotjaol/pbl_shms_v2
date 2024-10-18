@@ -37,8 +37,8 @@ DHT dht(DHTPIN, DHTTYPE);
 unsigned long lastSensorReadTime = 0;
 unsigned long lastDHTReadTime = 0;
 unsigned long lastDisplayUpdateTime = 0;
-const unsigned long sensorReadInterval = 200;
-const unsigned long dhtReadInterval = 2000;
+const unsigned long sensorReadInterval = 200;     // Define 5hz interval
+const unsigned long dhtReadInterval = 2000;       // Define 0.5hz interval
 const unsigned long displayUpdateInterval = 2000; // LCD Display Update Interval
 
 int displayIndex = 0;
