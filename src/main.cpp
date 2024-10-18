@@ -15,19 +15,22 @@
 // Define PIN DHT22
 #define DHTPIN 1
 #define DHTTYPE DHT22
+
 // Define MPU and ADXL
 #define MPU6050_ADDRESS 0x68
 #define ADXL345_ADDRESS 0x53
 #define SDA 8
 #define SCL 9
+
 // Define LCD output
-#define OLED_RESET 7
+#define OLED_RESET 7 // RESET LCD output
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 32
 #define SSD1306_I2C_ADDRESS 0x3C
 
+// Define Strain Gauge and Reset
 #define STRAIN_GAUGE_PIN 20
-#define RESET_BUTTON_PIN 2
+#define RESET_BUTTON_PIN 2 // RESET All Instruments
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 Adafruit_ADXL345_Unified adxl = Adafruit_ADXL345_Unified();
@@ -42,6 +45,48 @@ const unsigned long dhtReadInterval = 2000;       // Define 0.5hz interval
 const unsigned long displayUpdateInterval = 2000; // LCD Display Update Interval
 
 int displayIndex = 0;
+
+void connectToWiFi()
+{
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 0);
+
+  Serial.println("Connecting to DTEO-VOKASI ... ");
+  display.println("Connecting to");
+  display.println("\nDTEO-VOKASI ...");
+  display.display();
+  delay(1500);
+
+  WiFi.begin("DTEO-VOKASI", "TEO123456");
+
+  unsigned long startTime = millis();
+  while (WiFi.status() != WL_CONNECTED)
+  {
+    if (millis() - startTime > 10000) // Re-connect 10s
+    {
+      Serial.println("Failed connect WiFi");
+      display.clearDisplay();
+      display.setCursor(0, 0);
+      display.println("WiFi Fail To Connect !!!");
+      display.display();
+      return;
+    }
+    delay(500);
+  }
+
+  Serial.println("WiFi Connected !!!");
+  Serial.print("IP Address: ");
+  Serial.println(WiFi.localIP());
+
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.println("WiFi Connected !!!");
+  display.print("DTEO-VOKASI");
+  display.display();
+  delay(1500);
+}
 
 void setup()
 {
@@ -70,14 +115,7 @@ void setup()
     Serial.println("ADXL Connected");
   }
 
-  WiFi.begin("DTEO-VOKASI", "TEO123456");
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    Serial.println("WiFi Connecting ...");
-    delay(1000);
-  }
-
-  Serial.println("Loop running...");
+  connectToWiFi();
 }
 
 void readSensors(float &gyroX, float &gyroY, float &gyroZ, float &accelX, float &accelY, float &accelZ, float &strainValue)
@@ -157,6 +195,12 @@ void resetSensors(float &gyroX, float &gyroY, float &gyroZ, float &accelX, float
 
 void loop()
 {
+  if (WiFi.status() != WL_CONNECTED)
+  {
+    Serial.println("Reconnect WiFi ...");
+    connectToWiFi();
+  }
+
   static float gyroX, gyroY, gyroZ, accelX, accelY, accelZ, strainValue, temperature, humidity;
   unsigned long currentMillis = millis();
   if (digitalRead(RESET_BUTTON_PIN) == LOW)
