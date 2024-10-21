@@ -1,139 +1,287 @@
 ## Low Memory Solution
 
-```#include <Wire.h>
-#include <Adafruit_MPU6050.h>
+```
+#include <Arduino.h>
 #include <Adafruit_ADXL345_U.h>
+#include <Adafruit_MPU6050.h>
 #include <DHT.h>
+#include <Wire.h>
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <Adafruit_SSD1306.h>
 
-#define SCREEN_WIDTH 128
-#define SCREEN_HEIGHT 64
-#define OLED_RESET -1
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-
+// Define PIN DHT22
 #define DHTPIN 1
 #define DHTTYPE DHT22
+
+// Define MPU and ADXL
+#define MPU6050_ADDRESS 0x68
+#define ADXL345_ADDRESS 0x53
+#define SDA 8
+#define SCL 9
+
+// Define LCD output
+#define OLED_RESET 7 // RESET LCD output
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 32
+#define SSD1306_I2C_ADDRESS 0x3C
+
+// Define Strain Gauge and Reset
+#define STRAIN_GAUGE_PIN 20
+#define RESET_BUTTON_PIN 2 // RESET All Instruments
+
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+Adafruit_ADXL345_Unified adxl = Adafruit_ADXL345_Unified();
+Adafruit_MPU6050 mpu;
 DHT dht(DHTPIN, DHTTYPE);
 
-#define MPU_SDA 8
-#define MPU_SCL 9
-Adafruit_MPU6050 mpu;
+unsigned long lastSensorReadTime = 0;
+unsigned long lastDHTReadTime = 0;
+unsigned long lastDisplayUpdateTime = 0;
+const unsigned long sensorReadInterval = 200;     // Define 5hz interval
+const unsigned long dhtReadInterval = 2000;       // Define 0.5hz interval
+const unsigned long displayUpdateInterval = 2000; // LCD Display Update Interval
 
-#define ADXL_SDA 8
-#define ADXL_SCL 9
-Adafruit_ADXL345_Unified adxl = Adafruit_ADXL345_Unified(12345);
+int displayIndex = 0;
 
-#define STRAIN_PIN 20
+void kirimDataKeServer(float gyroX, float gyroY, float gyroZ, float accelX, float accelY, float accelZ, float strainValue, float temperature, float humidity);
 
-#define VOLTAGE_SENSOR 21
 
-const char *ssid = "DTEO-VOKASI";
-const char *password = "TEO123456";
-
-void setup() {
-  Wire.begin(MPU_SDA, MPU_SCL);
-  Serial.begin(115200);
-
-  if (!mpu.begin()) {
-    Serial.println("Failed to find MPU6050 chip");
-    while (1);
-  }
-
-  if (!adxl.begin()) {
-    Serial.println("Failed to find ADXL345 chip");
-    while (1);
-  }
-
-  dht.begin();
-
-  if (!display.begin(SSD1306_I2C_ADDRESS, OLED_RESET)) {
-    Serial.println("SSD1306 allocation failed");
-    while (1);
-  }
+void connectToWiFi()
+{
   display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 0);
 
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(1000);
+  Serial.println("Connecting to DTEO-VOKASI ... ");
+  display.println("Connecting to");
+  display.println("\nDTEO-VOKASI ...");
+  display.display();
+  delay(1500);
+
+  WiFi.begin("DTEO-VOKASI", "TEO123456");
+
+  unsigned long startTime = millis();
+  while (WiFi.status() != WL_CONNECTED)
+  {
+    if (millis() - startTime > 10000) // Re-connect 10s
+    {
+      Serial.println("Failed connect WiFi");
+      display.clearDisplay();
+      display.setCursor(0, 0);
+      display.println("WiFi Fail To Connect !!!");
+      display.display();
+      return;
+    }
+    delay(500);
   }
+
+  Serial.println("WiFi Connected !!!");
+  Serial.print("IP Address: ");
+  Serial.println(WiFi.localIP());
+
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.println("WiFi Connected !!!");
+  display.print("DTEO-VOKASI");
+  display.display();
+  delay(1500);
 }
 
-void loop() {
-  static unsigned long lastSensorUpdate = 0;
-  static unsigned long lastDHTUpdate = 0;
-  static unsigned long lastDisplayUpdate = 0;
+void setup()
+{
+  Serial.begin(115200);
+  Wire.begin(SDA, SCL);
 
-  if (millis() - lastSensorUpdate >= 200) {
-    sensors_event_t a, g, temp;
-    mpu.getEvent(&a, &g, &temp);
-    float accelX = a.acceleration.x;
-    float accelY = a.acceleration.y;
-    float accelZ = a.acceleration.z;
-    float gyroX = g.gyro.x;
-    float gyroY = g.gyro.y;
-    float gyroZ = g.gyro.z;
+  pinMode(RESET_BUTTON_PIN, INPUT_PULLUP);
 
-    sensors_event_t adxlEvent;
-    adxl.getEvent(&adxlEvent);
-    float adxlAccelX = adxlEvent.acceleration.x;
-    float adxlAccelY = adxlEvent.acceleration.y;
-    float adxlAccelZ = adxlEvent.acceleration.z;
-
-    int strainValue = analogRead(STRAIN_PIN);
-
-    Serial.print("MPU6050 Accel X: "); Serial.print(accelX); Serial.println(" m/s^2");
-    Serial.print("MPU6050 Accel Y: "); Serial.print(accelY); Serial.println(" m/s^2");
-    Serial.print("MPU6050 Accel Z: "); Serial.print(accelZ); Serial.println(" m/s^2");
-    Serial.print("MPU6050 Gyro X: "); Serial.print(gyroX); Serial.println(" rad/s");
-    Serial.print("MPU6050 Gyro Y: "); Serial.print(gyroY); Serial.println(" rad/s");
-    Serial.print("MPU6050 Gyro Z: "); Serial.print(gyroZ); Serial.println(" rad/s");
-
-    Serial.print("ADXL345 Accel X: "); Serial.print(adxlAccelX); Serial.println(" m/s^2");
-    Serial.print("ADXL345 Accel Y: "); Serial.print(adxlAccelY); Serial.println(" m/s^2");
-    Serial.print("ADXL345 Accel Z: "); Serial.print(adxlAccelZ); Serial.println(" m/s^2");
-
-    Serial.print("Strain Value: "); Serial.print(strainValue); Serial.println(" units");
-
-    lastSensorUpdate = millis();
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C))
+  {
+    Serial.println(F("SSD1306 Gagal"));
+    for (;;)
+      ;
+  }
+  adxl.begin(ADXL345_ADDRESS);
+  mpu.begin(MPU6050_ADDRESS);
+  dht.begin();
+  if (!mpu.begin() && !adxl.begin())
+  {
+    Serial.println("MPU6050 Not Connected");
+    Serial.println("ADXL345 Not Connected");
+  }
+  else
+  {
+    Serial.println("MPU6050 Connected");
+    Serial.println("ADXL Connected");
   }
 
-  if (millis() - lastDHTUpdate >= 2000) {
-    float temperature = dht.readTemperature();
-    float humidity = dht.readHumidity();
-    if (isnan(temperature) || isnan(humidity)) {
-      temperature = 0;
-      humidity = 0;
+  connectToWiFi();
+}
+
+void readSensors(float &gyroX, float &gyroY, float &gyroZ, float &accelX, float &accelY, float &accelZ, float &strainValue)
+{
+  sensors_event_t a, g, temp;
+  mpu.getEvent(&a, &g, &temp);
+  gyroX = g.gyro.x;
+  gyroY = g.gyro.y;
+  gyroZ = g.gyro.z;
+  accelX = a.acceleration.x;
+  accelY = a.acceleration.y;
+  accelZ = a.acceleration.z;
+
+  int rawValue = analogRead(STRAIN_GAUGE_PIN);
+  strainValue = rawValue * (100.0 / 1023.0);
+}
+
+void readDHT(float &temperature, float &humidity)
+{
+  temperature = dht.readTemperature();
+  humidity = dht.readHumidity();
+}
+
+void kirimDataKeServer(float gyroX, float gyroY, float gyroZ, float accelX, float accelY, float accelZ, float strainValue, float temperature, float humidity)
+{
+  // Print sensor values to Serial
+  Serial.println("Data yang dikirim ke server:");
+  Serial.print("Gyro X: "); Serial.println(gyroX);
+  Serial.print("Gyro Y: "); Serial.println(gyroY);
+  Serial.print("Gyro Z: "); Serial.println(gyroZ);
+  Serial.print("Accel X: "); Serial.println(accelX);
+  Serial.print("Accel Y: "); Serial.println(accelY);
+  Serial.print("Accel Z: "); Serial.println(accelZ);
+  Serial.print("Strain Value: "); Serial.println(strainValue);
+  Serial.print("Temperature: "); Serial.println(temperature);
+  Serial.print("Humidity: "); Serial.println(humidity);
+  Serial.println();
+
+  HTTPClient http;
+  WiFiClient client;
+  String postData;
+  
+  // Construct POST data string
+  postData = "humidity=" + String(humidity) +
+             "&temperature=" + String(temperature) +
+             "&accelX=" + String(accelX) +
+             "&accelY=" + String(accelY) +
+             "&accelZ=" + String(accelZ) +
+             "&gyroX=" + String(gyroX) +
+             "&gyroY=" + String(gyroY) +
+             "&gyroZ=" + String(gyroZ) +
+             "&strainValue=" + String(strainValue);
+
+
+
+  http.begin(client, "http://10.17.38.92/shmsv2/sensor.php");
+  http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+
+  int httpCode = http.POST(postData); // Send the request
+  String payload = http.getString();  // Get the response payload
+  
+  Serial.println("HTTP Response code: " + String(httpCode));
+  Serial.println("Server response: " + payload);
+  
+  http.end();
+}
+
+void updateDisplay(float gyroX, float gyroY, float gyroZ, float accelX, float accelY, float accelZ, float strainValue, float temperature, float humidity)
+{
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 0);
+
+  switch (displayIndex)
+  {
+  case 0:
+    display.printf("Gyro X: %.2f deg/s", gyroX);
+    display.printf("\nGyro Y: %.2f deg/s", gyroY);
+    display.printf("\nGyro Z: %.2f deg/s", gyroZ);
+    break;
+  case 1:
+    display.printf("Accel X: %.2f m/s^2", accelX);
+    display.printf("\nAccel Y: %.2f m/s^2", accelY);
+    display.printf("\nAccel Z: %.2f m/s^2", accelZ);
+    break;
+  case 2:
+    display.printf("Strain  : %.2f N", strainValue);
+    display.printf("\nTemp    : %.2f C", temperature);
+    display.printf("\nHumidity: %.2f %%", humidity);
+    break;
+  }
+
+  display.display();
+  displayIndex = (displayIndex + 1) % 3;
+}
+
+void resetSensors(float &gyroX, float &gyroY, float &gyroZ, float &accelX, float &accelY, float &accelZ, float &strainValue, float &temperature, float &humidity)
+{
+  gyroX = gyroY = gyroZ = accelX = accelY = accelZ = strainValue = temperature = humidity = 0;
+  display.clearDisplay();
+  display.display();
+}
+
+void loop()
+{
+  if (WiFi.status() != WL_CONNECTED)
+  {
+    Serial.println("Reconnect WiFi ...");
+    connectToWiFi();
+  }
+
+  static float gyroX, gyroY, gyroZ, accelX, accelY, accelZ, strainValue, temperature, humidity;
+  unsigned long currentMillis = millis();
+  if (digitalRead(RESET_BUTTON_PIN) == LOW)
+  {
+    resetSensors(gyroX, gyroY, gyroZ, accelX, accelY, accelZ, strainValue, temperature, humidity);
+  }
+  else
+  {
+    // Update sensor ADXL, MPU, dan strain gauge (5 Hz)
+    if (currentMillis - lastSensorReadTime >= sensorReadInterval)
+    {
+      lastSensorReadTime = currentMillis;
+      readSensors(gyroX, gyroY, gyroZ, accelX, accelY, accelZ, strainValue);
+
+      // Serial Monitor
+      Serial.print("Gyro X: ");
+      Serial.print(gyroX);
+      Serial.print("\t Gyro Y: ");
+      Serial.print(gyroY);
+      Serial.print("\t Gyro Z: ");
+      Serial.println(gyroZ);
+      Serial.print("Accel X: ");
+      Serial.print(accelX);
+      Serial.print("\t Accel Y: ");
+      Serial.print(accelY);
+      Serial.print("\t Accel Z: ");
+      Serial.println(accelZ);
+      Serial.print("Strain Value: ");
+      Serial.println(strainValue);
     }
 
-    Serial.print("Temperature: "); Serial.print(temperature); Serial.println(" °C");
-    Serial.print("Humidity: "); Serial.print(humidity); Serial.println(" %");
+    // Update DHT Sensor (0.5 Hz)
+    if (currentMillis - lastDHTReadTime >= dhtReadInterval)
+    {
+      lastDHTReadTime = currentMillis;
+      readDHT(temperature, humidity);
 
-    lastDHTUpdate = millis();
-  }
+      // Serial Monitor
+      Serial.print("Temperature: ");
+      Serial.print(temperature);
+      Serial.print("\t Humidity: ");
+      Serial.println(humidity);
 
-  if (millis() - lastDisplayUpdate >= 2000) {
-    display.clearDisplay();
-    display.setTextSize(1);
-    display.setTextColor(SSD1306_WHITE);
-    display.setCursor(0, 0);
+      // Kirim data ke server
+      kirimDataKeServer(gyroX, gyroY, gyroZ, accelX, accelY, accelZ, strainValue, temperature, humidity);
+    }
 
-    display.print("MPU6050 Accel X: "); display.println(a.acceleration.x);
-    display.print("MPU6050 Accel Y: "); display.println(a.acceleration.y);
-    display.print("MPU6050 Accel Z: "); display.println(a.acceleration.z);
-    display.print("MPU6050 Gyro X: "); display.println(g.gyro.x);
-    display.print("MPU6050 Gyro Y: "); display.println(g.gyro.y);
-    display.print("MPU6050 Gyro Z: "); display.println(g.gyro.z);
-
-    display.print("ADXL345 Accel X: "); display.println(adxlAccelX);
-    display.print("ADXL345 Accel Y: "); display.println(adxlAccelY);
-    display.print("ADXL345 Accel Z: "); display.println(adxlAccelZ);
-
-    display.print("Strain: "); display.println(analogRead(STRAIN_PIN));
-    display.display();
-
-    lastDisplayUpdate = millis();
+    // Update OLED Display (2 Hz)
+    if (currentMillis - lastDisplayUpdateTime >= displayUpdateInterval)
+    {
+      lastDisplayUpdateTime = currentMillis;
+      updateDisplay(gyroX, gyroY, gyroZ, accelX, accelY, accelZ, strainValue, temperature, humidity);
+    }
   }
 }
 
