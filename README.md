@@ -168,6 +168,8 @@ void kirimDataKeServer(float gyroX, float gyroY, float gyroZ, float accelX, floa
 {
   // Print sensor values to Serial
   Serial.println("Data yang dikirim ke server:");
+  Serial.print("Floor: ");
+  Serial.println(currentFloor);
   Serial.print("Gyro X: ");
   Serial.println(gyroX);
   Serial.print("Gyro Y: ");
@@ -241,12 +243,12 @@ void updateDisplay(float gyroX, float gyroY, float gyroZ, float accelX, float ac
     display.printf("\nHumidity: %.2f %%", humidity);
     break;
   case 3:
-    display.printf("Lantai Saat Ini: %d", currentFloor);
+    display.printf("Floor: %d", currentFloor);
     break;
   }
 
   display.display();
-  displayIndex = (displayIndex + 1) % 3;
+  displayIndex = (displayIndex + 1) % 4;
 }
 
 void resetSensors(float &gyroX, float &gyroY, float &gyroZ, float &accelX, float &accelY, float &accelZ, float &strainValue, float &temperature, float &humidity)
@@ -316,6 +318,9 @@ void loop()
       readSensors(gyroX, gyroY, gyroZ, accelX, accelY, accelZ, strainValue);
 
       // Serial Monitor
+      Serial.print("\n");
+      Serial.print("Lantai: ");
+      Serial.println(lastLantai);
       Serial.print("Gyro X: ");
       Serial.print(gyroX);
       Serial.print("\t Gyro Y: ");
@@ -328,10 +333,8 @@ void loop()
       Serial.print(accelY);
       Serial.print("\t Accel Z: ");
       Serial.println(accelZ);
-      Serial.print("\t Strain Value: ");
+      Serial.print("Strain Value: ");
       Serial.println(strainValue);
-      Serial.print("Lantai: ");
-      Serial.println(lastLantai);
     }
 
     // Update DHT Sensor (0.5 Hz)
@@ -345,6 +348,7 @@ void loop()
       Serial.print(temperature);
       Serial.print("\t Humidity: ");
       Serial.println(humidity);
+      Serial.print("\n");
 
       // Kirim data ke server
       kirimDataKeServer(gyroX, gyroY, gyroZ, accelX, accelY, accelZ, strainValue, temperature, humidity, lastLantai);
