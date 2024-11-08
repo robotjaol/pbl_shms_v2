@@ -8,9 +8,9 @@
 #include <Adafruit_SSD1306.h>
 
 // Define Floor and indicator
-#define FLOOR_1 35
+#define FLOOR_1 37
 #define FLOOR_2 36
-#define FLOOR_3 37
+#define FLOOR_3 35
 #define FLOOR_IND_1 38
 #define FLOOR_IND_2 39
 #define FLOOR_IND_3 40
