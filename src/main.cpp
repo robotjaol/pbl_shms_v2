@@ -73,7 +73,7 @@ void connectToWiFi()
   unsigned long startTime = millis();
   while (WiFi.status() != WL_CONNECTED)
   {
-    if (millis() - startTime > 10000) // Re-connect 10s
+    if (millis() - startTime > 2000) // Re-connect 2s
     {
       Serial.println("Failed connect WiFi");
       display.clearDisplay();
