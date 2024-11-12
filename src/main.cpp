@@ -47,8 +47,8 @@ DHT dht(DHTPIN, DHTTYPE);
 unsigned long lastSensorReadTime = 0;
 unsigned long lastDHTReadTime = 0;
 unsigned long lastDisplayUpdateTime = 0;
-const unsigned long sensorReadInterval = 200;     // Define 5hz interval
-const unsigned long dhtReadInterval = 2000;       // Define 0.5hz interval
+const unsigned long sensorReadInterval = 200;     // Define 5hz interval 200ms
+const unsigned long dhtReadInterval = 2000;       // Define 0.5hz interval 2s
 const unsigned long displayUpdateInterval = 2000; // LCD Display Update Interval
 
 int displayIndex = 0;
@@ -123,6 +123,14 @@ void setup()
     for (;;)
       ;
   }
+
+  // if (!mpu.begin() && !adxl.begin()) {
+  //   Serial.println("MPU6050 & ADXL345 failed to init.");
+  // } else {
+  //   Serial.println("MPU6050 & ADXL345 connect.");
+  // }
+
+  //**** ERROR HANDLER */
   adxl.begin(ADXL345_ADDRESS);
   mpu.begin(MPU6050_ADDRESS);
   dht.begin();
@@ -159,6 +167,17 @@ void readDHT(float &temperature, float &humidity)
 {
   temperature = dht.readTemperature();
   humidity = dht.readHumidity();
+
+  //**** ERROR HANDLER */
+  // if (isnan(temperature) || isnan(humidity)) {
+  //     Serial.println("Gagal membaca data dari sensor DHT.");
+  // } else {
+  //     Serial.print("Suhu: ");
+  //     Serial.print(temperature);
+  //     Serial.print("°C, Kelembaban: ");
+  //     Serial.print(humidity);
+  //     Serial.println("%");
+  // }
 }
 
 void kirimDataKeServer(float gyroX, float gyroY, float gyroZ, float accelX, float accelY, float accelZ, float strainValue, float temperature, float humidity, int currentFloor)
