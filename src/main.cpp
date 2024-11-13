@@ -182,31 +182,31 @@ void readDHT(float &temperature, float &humidity)
   }
 }
 
-  void kirimDataKeServer(float gyroX, float gyroY, float gyroZ, float accelX, float accelY, float accelZ, float strainValue, float temperature, float humidity, int currentFloor)
+  void kirimDataKeServer(float gyroX, float gyroY, float gyroZ, float accelX, float accelY, float accelZ, float strainValue, float temperature, float humidity) // int current Floor saya hapus
   {
     // Print sensor values to Serial
-    Serial.println("Data yang dikirim ke server:");
-    Serial.print("Floor: ");
-    Serial.println(currentFloor);
-    Serial.print("Gyro X: ");
-    Serial.println(gyroX);
-    Serial.print("Gyro Y: ");
-    Serial.println(gyroY);
-    Serial.print("Gyro Z: ");
-    Serial.println(gyroZ);
-    Serial.print("Accel X: ");
-    Serial.println(accelX);
-    Serial.print("Accel Y: ");
-    Serial.println(accelY);
-    Serial.print("Accel Z: ");
-    Serial.println(accelZ);
-    Serial.print("Strain Value: ");
-    Serial.println(strainValue);
-    Serial.print("Temperature: ");
-    Serial.println(temperature);
-    Serial.print("Humidity: ");
-    Serial.println(humidity);
-    Serial.println();
+    // Serial.println("Data yang dikirim ke server:");
+    // Serial.print("Floor: ");
+    // Serial.println(currentFloor);
+    // Serial.print("Gyro X: ");
+    // Serial.println(gyroX);
+    // Serial.print("Gyro Y: ");
+    // Serial.println(gyroY);
+    // Serial.print("Gyro Z: ");
+    // Serial.println(gyroZ);
+    // Serial.print("Accel X: ");
+    // Serial.println(accelX);
+    // Serial.print("Accel Y: ");
+    // Serial.println(accelY);
+    // Serial.print("Accel Z: ");
+    // Serial.println(accelZ);
+    // Serial.print("Strain Value: ");
+    // Serial.println(strainValue);
+    // Serial.print("Temperature: ");
+    // Serial.println(temperature);
+    // Serial.print("Humidity: ");
+    // Serial.println(humidity);
+    // Serial.println();
 
     HTTPClient http;
     WiFiClient client;
@@ -236,7 +236,7 @@ void readDHT(float &temperature, float &humidity)
     http.end();
   }
 
-  void updateDisplay(float gyroX, float gyroY, float gyroZ, float accelX, float accelY, float accelZ, float strainValue, float temperature, float humidity, int currentFloor)
+  void updateDisplay(float gyroX, float gyroY, float gyroZ, float accelX, float accelY, float accelZ, float strainValue, float temperature, float humidity)
   {
     display.clearDisplay();
     display.setTextSize(1);
@@ -260,9 +260,9 @@ void readDHT(float &temperature, float &humidity)
       display.printf("\nTemp    : %.2f C", temperature);
       display.printf("\nHumidity: %.2f %%", humidity);
       break;
-    case 3:
-      display.printf("Floor: %d", currentFloor);
-      break;
+    // case 3:
+    //   display.printf("Floor: %d", currentFloor);
+    //   break;
     }
 
     display.display();
@@ -346,7 +346,7 @@ void readDHT(float &temperature, float &humidity)
       lastSensorReadTime = currentMillis;
       readSensors(gyroX, gyroY, gyroZ, accelX, accelY, accelZ, strainValue);
 
-      kirimDataKeServer(gyroX, gyroY, gyroZ, accelX, accelY, accelZ, strainValue, temperature, humidity, lastLantai);
+      kirimDataKeServer(gyroX, gyroY, gyroZ, accelX, accelY, accelZ, strainValue, temperature, humidity); //lastLantai saya hapus
 
       //==============Serial Monitor DEBUGGING ONLY
       // Serial.print("\n");
@@ -368,11 +368,11 @@ void readDHT(float &temperature, float &humidity)
       // Serial.println(strainValue);
     }
 
-    // LCD Display
+    // *** LCD Display ***//
     if (currentMillis - lastDisplayUpdateTime >= displayUpdateInterval)
     {
       lastDisplayUpdateTime = currentMillis;
-      updateDisplay(gyroX, gyroY, gyroZ, accelX, accelY, accelZ, strainValue, temperature, humidity, lastLantai);
+      updateDisplay(gyroX, gyroY, gyroZ, accelX, accelY, accelZ, strainValue, temperature, humidity); // int currentFloor saya hapus
     }
   }
 
