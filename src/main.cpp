@@ -174,7 +174,7 @@ void readDHT(float &temperature, float &humidity)
   //** ERROR HANDLER */
   if (isnan(temperature) || isnan(humidity))
   {
-    Serial.println("Gagal membaca data dari sensor DHT.");
+    Serial.println("DHT : isnan.");
     // } else {
     //     Serial.print("Suhu: ");
     //     Serial.print(temperature);
@@ -275,19 +275,24 @@ void updateDisplay(float gyroX, float gyroY, float gyroZ, float accelX, float ac
 void resetSensors(float &gyroX, float &gyroY, float &gyroZ, float &accelX, float &accelY, float &accelZ, float &strainValue, float &temperature, float &humidity)
 {
   gyroX = gyroY = gyroZ = accelX = accelY = accelZ = strainValue = temperature = humidity = 0;
+  
   display.clearDisplay();
-  display.display();
-
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 0);
+  
   /*Debugging Device Calibration*/
-  Serial.println(gyroX);
-  Serial.println(gyroY);
-  Serial.println(gyroZ);
-  Serial.println(accelX);
-  Serial.println(accelY);
-  Serial.println(accelZ);
-  Serial.println(strainValue);
-  Serial.println(temperature);
-  Serial.println(humidity);
+  // Serial.println(gyroX);
+  // Serial.println(gyroY);
+  // Serial.println(gyroZ);
+  // Serial.println(accelX);
+  // Serial.println(accelY);
+  // Serial.println(accelZ);
+  // Serial.println(strainValue);
+  // Serial.println(temperature);
+  // Serial.println(humidity);
+  
+  display.printf("Reset Success");
 }
 
 void loop()
