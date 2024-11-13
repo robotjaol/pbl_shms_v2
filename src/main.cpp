@@ -169,8 +169,8 @@ void readDHT(float &temperature, float &humidity)
   humidity = dht.readHumidity();
 
   //**** ERROR HANDLER */
-  // if (isnan(temperature) || isnan(humidity)) {
-  //     Serial.println("Gagal membaca data dari sensor DHT.");
+  if (isnan(temperature) || isnan(humidity)) {
+      Serial.println("Gagal membaca data dari sensor DHT.");
   // } else {
   //     Serial.print("Suhu: ");
   //     Serial.print(temperature);
@@ -219,8 +219,8 @@ void kirimDataKeServer(float gyroX, float gyroY, float gyroZ, float accelX, floa
              "&gyroX=" + String(gyroX) +
              "&gyroY=" + String(gyroY) +
              "&gyroZ=" + String(gyroZ) +
-             "&strainValue=" + String(strainValue) +
-             "&lantai=" + String(lastLantai);
+             "&strainValue=" + String(strainValue); 
+            //  "&lantai=" + String(lastLantai);
 
   http.begin(client, "http://10.17.36.176/shmsv2_2/sensor.php");
   http.addHeader("Content-Type", "application/x-www-form-urlencoded");
