@@ -14,6 +14,7 @@
 #define FLOOR_IND_1 38
 #define FLOOR_IND_2 39
 #define FLOOR_IND_3 40
+
 // Additional constants for DB access
 int lastLantai = 0;                                                 // Lantai terakhir ke db
 bool stateBtn1 = LOW, stateBtn2 = LOW, stateBtn3 = LOW;             // Status tombol
@@ -75,7 +76,7 @@ void connectToWiFi()
   {
     if (millis() - startTime > 2000) // Re-connect 2s
     {
-      //*** DEBUG ***/
+      //* DEBUG */
       // Serial.println("Failed connect WiFi");
       display.clearDisplay();
       display.setCursor(0, 0);
@@ -86,7 +87,7 @@ void connectToWiFi()
     delay(500);
   }
 
-  //*** DEBUG ***/
+  //* DEBUG */
   // Serial.println("WiFi Connected !!!");
   // Serial.print("IP Address: ");
   // Serial.println(WiFi.localIP());
@@ -105,7 +106,7 @@ void setup()
   Wire.begin(SDA, SCL);
 
   // Reset Pin Configuration
-  pinMode(RESET_BUTTON_PIN, INPUT_PULLUP);
+  pinMode(RESET_BUTTON_PIN, INPUT);
 
   // Floor Button Configuration
   pinMode(FLOOR_1, INPUT);
@@ -132,7 +133,7 @@ void setup()
   //   Serial.println("MPU6050 & ADXL345 connect.");
   // }
 
-  //**** ERROR HANDLER */
+  //** ERROR HANDLER */
   adxl.begin(ADXL345_ADDRESS);
   mpu.begin(MPU6050_ADDRESS);
   dht.begin();
@@ -170,7 +171,7 @@ void readDHT(float &temperature, float &humidity)
   temperature = dht.readTemperature();
   humidity = dht.readHumidity();
 
-  //**** ERROR HANDLER */
+  //** ERROR HANDLER */
   if (isnan(temperature) || isnan(humidity))
   {
     Serial.println("Gagal membaca data dari sensor DHT.");
@@ -276,6 +277,17 @@ void readDHT(float &temperature, float &humidity)
     gyroX = gyroY = gyroZ = accelX = accelY = accelZ = strainValue = temperature = humidity = 0;
     display.clearDisplay();
     display.display();
+    
+    /*Debugging Device Calibration*/
+    Serial.println(gyroX);
+    Serial.println(gyroY);
+    Serial.println(gyroZ);
+    Serial.println(accelX);
+    Serial.println(accelY);
+    Serial.println(accelZ);
+    Serial.println(strainValue);
+    Serial.println(temperature);
+    Serial.println(humidity);
   }
 
   void loop()
@@ -284,7 +296,7 @@ void readDHT(float &temperature, float &humidity)
     static float temperature = 0, humidity = 0;
     unsigned long currentMillis = millis();
 
-    if (digitalRead(RESET_BUTTON_PIN) == LOW)
+    if (digitalRead(RESET_BUTTON_PIN) != HIGH)
     {
       resetSensors(gyroX, gyroY, gyroZ, accelX, accelY, accelZ, strainValue, temperature, humidity);
     }
@@ -370,7 +382,7 @@ void readDHT(float &temperature, float &humidity)
       // Serial.println(strainValue);
     }
 
-    // *** LCD Display ***//
+    // * LCD Display *//
     if (currentMillis - lastDisplayUpdateTime >= displayUpdateInterval)
     {
       lastDisplayUpdateTime = currentMillis;
