@@ -75,7 +75,8 @@ void connectToWiFi()
   {
     if (millis() - startTime > 2000) // Re-connect 2s
     {
-      Serial.println("Failed connect WiFi");
+      //*** DEBUG ***/
+      // Serial.println("Failed connect WiFi");
       display.clearDisplay();
       display.setCursor(0, 0);
       display.println("WiFi Fail To Connect !!!");
@@ -85,9 +86,10 @@ void connectToWiFi()
     delay(500);
   }
 
-  Serial.println("WiFi Connected !!!");
-  Serial.print("IP Address: ");
-  Serial.println(WiFi.localIP());
+  //*** DEBUG ***/
+  // Serial.println("WiFi Connected !!!");
+  // Serial.print("IP Address: ");
+  // Serial.println(WiFi.localIP());
 
   display.clearDisplay();
   display.setCursor(0, 0);
@@ -227,8 +229,8 @@ void readDHT(float &temperature, float &humidity)
     http.begin(client, "http://10.17.38.172/shmsv2_2/sensor.php");
     http.addHeader("Content-Type", "application/x-www-form-urlencoded");
 
-    int httpCode = http.POST(postData); // Send the request
-    String payload = http.getString();  // Get the response payload
+    int httpCode = http.POST(postData); // request
+    String payload = http.getString();  // payload
 
     Serial.println("HTTP Response code: " + String(httpCode));
     Serial.println("Server response: " + payload);
