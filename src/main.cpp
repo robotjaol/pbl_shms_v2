@@ -224,7 +224,7 @@ void readDHT(float &temperature, float &humidity)
                "&strainValue=" + String(strainValue);
     //  "&lantai=" + String(lastLantai);
 
-    http.begin(client, "http://10.17.36.176/shmsv2_2/sensor.php");
+    http.begin(client, "http://10.17.38.172/shmsv2_2/sensor.php");
     http.addHeader("Content-Type", "application/x-www-form-urlencoded");
 
     int httpCode = http.POST(postData); // Send the request
