@@ -20,6 +20,12 @@ int lastLantai = 0;                                                 // Lantai te
 bool stateBtn1 = LOW, stateBtn2 = LOW, stateBtn3 = LOW;             // Status tombol
 bool lastStateBtn1 = LOW, lastStateBtn2 = LOW, lastStateBtn3 = LOW; // Status tombol sebelumnya
 
+float temperature = 0, humidity = 0;
+float temperatureState = temperature; // Handler last value
+float humidityState = humidity;       // Handler last value
+float humidityLast;
+float temperatureLast;
+
 // Define PIN DHT22
 #define DHTPIN 1
 #define DHTTYPE DHT22
@@ -53,6 +59,7 @@ const unsigned long dhtReadInterval = 2000;       // Define 0.5hz interval 2s
 const unsigned long displayUpdateInterval = 2000; // LCD Display Update Interval
 
 int displayIndex = 0;
+int updateCount = 0;
 
 void kirimDataKeServer(float gyroX, float gyroY, float gyroZ, float accelX, float accelY, float accelZ, float strainValue, float temperature, float humidity);
 
@@ -87,7 +94,7 @@ void connectToWiFi()
     delay(500);
   }
 
-  //* DEBUG */
+  //Debug WIFI
   // Serial.println("WiFi Connected !!!");
   // Serial.print("IP Address: ");
   // Serial.println(WiFi.localIP());
@@ -174,14 +181,12 @@ void readDHT(float &temperature, float &humidity)
   //** ERROR HANDLER */
   if (isnan(temperature) || isnan(humidity))
   {
-    Serial.println("DHT : isnan.");
-    // } else {
-    //     Serial.print("Suhu: ");
-    //     Serial.print(temperature);
-    //     Serial.print("°C, Kelembaban: ");
-    //     Serial.print(humidity);
-    //     Serial.println("%");
-    // }
+    Serial.println("DHT Sensor Error: NaN value");
+  }
+  else
+  {
+    temperatureState = temperature;
+    humidityState = humidity;
   }
 }
 
@@ -227,7 +232,8 @@ void kirimDataKeServer(float gyroX, float gyroY, float gyroZ, float accelX, floa
              "&strainValue=" + String(strainValue);
   //  "&lantai=" + String(lastLantai);
 
-  http.begin(client, "http://10.17.38.172/shmsv2_2/sensor.php");
+  http.begin(client, "http://10.17.37.202/shmsv2_2/sensor.php"); // MODUL LAMA
+  // http.begin(client, "http://10.17.37.202/shmsv2_2/sensor.php2"); // MODUL BARU
   http.addHeader("Content-Type", "application/x-www-form-urlencoded");
 
   int httpCode = http.POST(postData); // request
@@ -241,46 +247,70 @@ void kirimDataKeServer(float gyroX, float gyroY, float gyroZ, float accelX, floa
 
 void updateDisplay(float gyroX, float gyroY, float gyroZ, float accelX, float accelY, float accelZ, float strainValue, float temperature, float humidity)
 {
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setTextColor(SSD1306_WHITE);
-  display.setCursor(0, 0);
-
-  switch (displayIndex)
+  if (updateCount < 3)
   {
-  case 0:
-    display.printf("Gyro X: %.2f deg/s", gyroX);
-    display.printf("\nGyro Y: %.2f deg/s", gyroY);
-    display.printf("\nGyro Z: %.2f deg/s", gyroZ);
-    break;
-  case 1:
-    display.printf("Accel X: %.2f m/s^2", accelX);
-    display.printf("\nAccel Y: %.2f m/s^2", accelY);
-    display.printf("\nAccel Z: %.2f m/s^2", accelZ);
-    break;
-  case 2:
-    display.printf("Strain  : %.2f N", strainValue);
-    display.printf("\nTemp    : %.2f C", temperature);
-    display.printf("\nHumidity: %.2f %%", humidity);
-    break;
-    // case 3:
-    //   display.printf("Floor: %d", currentFloor);
-    //   break;
-  }
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(SSD1306_WHITE);
+    display.setCursor(0, 0);
 
-  display.display();
-  displayIndex = (displayIndex + 1) % 4;
+    switch (displayIndex)
+    {
+    case 0:
+      display.printf("Gyro X: %.2f deg/s", gyroX);
+      display.printf("\nGyro Y: %.2f deg/s", gyroY);
+      display.printf("\nGyro Z: %.2f deg/s", gyroZ);
+      digitalWrite(FLOOR_IND_1, HIGH);
+      digitalWrite(FLOOR_IND_2, LOW);
+      digitalWrite(FLOOR_IND_3, LOW);
+      break;
+    case 1:
+      display.printf("Accel X: %.2f m/s^2", accelX);
+      display.printf("\nAccel Y: %.2f m/s^2", accelY);
+      display.printf("\nAccel Z: %.2f m/s^2", accelZ);
+      digitalWrite(FLOOR_IND_1, LOW);
+      digitalWrite(FLOOR_IND_2, HIGH);
+      digitalWrite(FLOOR_IND_3, LOW);
+      break;
+    case 2:
+      display.printf("Strain  : %.2f N", strainValue);
+      display.printf("\nTemp    : %.2f C", temperature);
+      display.printf("\nHumidity: %.2f %%", humidity);
+      digitalWrite(FLOOR_IND_1, LOW);
+      digitalWrite(FLOOR_IND_2, LOW);
+      digitalWrite(FLOOR_IND_3, HIGH);
+      break;
+      // case 3:
+      //   display.printf("Floor: %d", currentFloor);
+      //   break;
+    }
+
+    display.display();
+    displayIndex = (displayIndex + 1) % 3;
+  }
 }
 
 void resetSensors(float &gyroX, float &gyroY, float &gyroZ, float &accelX, float &accelY, float &accelZ, float &strainValue, float &temperature, float &humidity)
 {
   gyroX = gyroY = gyroZ = accelX = accelY = accelZ = strainValue = temperature = humidity = 0;
-  
+
   display.clearDisplay();
-  display.setTextSize(1);
-  display.setTextColor(SSD1306_WHITE);
+  // display.setTextSize(1);
+  // display.setTextColor(SSD1306_WHITE);
   display.setCursor(0, 0);
-  
+  display.printf("Reset Success");
+
+  Serial.println("Reset Success");
+
+  digitalWrite(FLOOR_IND_1, 1);
+  delayMicroseconds(1000);
+  digitalWrite(FLOOR_IND_1, 0);
+  delayMicroseconds(1000);
+  digitalWrite(FLOOR_IND_1, 1);
+  delayMicroseconds(1000);
+  digitalWrite(FLOOR_IND_1, 0);
+  delayMicroseconds(1000);
+
   /*Debugging Device Calibration*/
   // Serial.println(gyroX);
   // Serial.println(gyroY);
@@ -291,17 +321,14 @@ void resetSensors(float &gyroX, float &gyroY, float &gyroZ, float &accelX, float
   // Serial.println(strainValue);
   // Serial.println(temperature);
   // Serial.println(humidity);
-  
-  display.printf("Reset Success");
 }
 
 void loop()
 {
   static float gyroX, gyroY, gyroZ, accelX, accelY, accelZ, strainValue;
-  static float temperature = 0, humidity = 0;
   unsigned long currentMillis = millis();
 
-  if (digitalRead(RESET_BUTTON_PIN) != HIGH)
+  if (digitalRead(RESET_BUTTON_PIN) == HIGH)
   {
     resetSensors(gyroX, gyroY, gyroZ, accelX, accelY, accelZ, strainValue, temperature, humidity);
   }
@@ -316,38 +343,41 @@ void loop()
   stateBtn2 = digitalRead(FLOOR_2);
   stateBtn3 = digitalRead(FLOOR_3);
 
-  if (stateBtn1 == HIGH && lastStateBtn1 == LOW)
-  {
-    lastLantai = 1;
-    digitalWrite(FLOOR_IND_1, HIGH);
-    digitalWrite(FLOOR_IND_2, LOW);
-    digitalWrite(FLOOR_IND_3, LOW);
-  }
-  else if (stateBtn2 == HIGH && lastStateBtn2 == LOW)
-  {
-    lastLantai = 2;
-    digitalWrite(FLOOR_IND_1, LOW);
-    digitalWrite(FLOOR_IND_2, HIGH);
-    digitalWrite(FLOOR_IND_3, LOW);
-  }
-  else if (stateBtn3 == HIGH && lastStateBtn3 == LOW)
-  {
-    lastLantai = 3;
-    digitalWrite(FLOOR_IND_1, LOW);
-    digitalWrite(FLOOR_IND_2, LOW);
-    digitalWrite(FLOOR_IND_3, HIGH);
-  }
+  /*
+    if (stateBtn1 == HIGH && lastStateBtn1 == LOW)
+    {
+      lastLantai = 1;
+      digitalWrite(FLOOR_IND_1, HIGH);
+      digitalWrite(FLOOR_IND_2, LOW);
+      digitalWrite(FLOOR_IND_3, LOW);
+    }
+    else if (stateBtn2 == HIGH && lastStateBtn2 == LOW)
+    {
+      lastLantai = 2;
+      digitalWrite(FLOOR_IND_1, LOW);
+      digitalWrite(FLOOR_IND_2, HIGH);
+      digitalWrite(FLOOR_IND_3, LOW);
+    }
+    else if (stateBtn3 == HIGH && lastStateBtn3 == LOW)
+    {
+      lastLantai = 3;
+      digitalWrite(FLOOR_IND_1, LOW);
+      digitalWrite(FLOOR_IND_2, LOW);
+      digitalWrite(FLOOR_IND_3, HIGH);
+    }
+
+  */
 
   lastStateBtn1 = stateBtn1;
   lastStateBtn2 = stateBtn2;
   lastStateBtn3 = stateBtn3;
 
-  if (lastLantai < 1 || lastLantai > 3)
-  {
-    Serial.println("Error reading");
-  }
+  // if (lastLantai < 1 || lastLantai > 3)
+  // {
+  //   Serial.println("Error reading");
+  // }
 
-  if (currentMillis - lastDHTReadTime >= 2000)
+  if (currentMillis - lastDHTReadTime >= 2000) // saya ganti, sebelumnya lastDHTReadTime
   {
     lastDHTReadTime = currentMillis;
     readDHT(temperature, humidity);
@@ -359,32 +389,16 @@ void loop()
     // Serial.println(humidity);
   }
 
+  //DHT last correction
+  humidityLast = humidityState;
+  temperatureLast = temperatureState;
+
   // (5 Hz)
   if (currentMillis - lastSensorReadTime >= 200)
   {
     lastSensorReadTime = currentMillis;
     readSensors(gyroX, gyroY, gyroZ, accelX, accelY, accelZ, strainValue);
-
-    kirimDataKeServer(gyroX, gyroY, gyroZ, accelX, accelY, accelZ, strainValue, temperature, humidity); // lastLantai saya hapus
-
-    //==============Serial Monitor DEBUGGING ONLY
-    // Serial.print("\n");
-    // Serial.print("Lantai: ");
-    // Serial.println(lastLantai);
-    // Serial.print("Gyro X: ");
-    // Serial.print(gyroX);
-    // Serial.print("\t Gyro Y: ");
-    // Serial.print(gyroY);
-    // Serial.print("\t Gyro Z: ");
-    // Serial.println(gyroZ);
-    // Serial.print("Accel X: ");
-    // Serial.print(accelX);
-    // Serial.print("\t Accel Y: ");
-    // Serial.print(accelY);
-    // Serial.print("\t Accel Z: ");
-    // Serial.println(accelZ);
-    // Serial.print("Strain Value: ");
-    // Serial.println(strainValue);
+    kirimDataKeServer(gyroX, gyroY, gyroZ, accelX, accelY, accelZ, strainValue, temperatureLast, humidityLast); // lastLantai saya hapus
   }
 
   // * LCD Display *//
