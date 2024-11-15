@@ -1,3 +1,5 @@
+https://www.semanticscholar.org/paper/A-LOW-COST-MULTI-SENSOR-SYSTEM-FOR-INVESTIGATING-OF-And%C3%B2-Baglio/7070324640aee1fcc0311496376c54b0eb590707
+
 ## Program sebelum Persentasi Progress
 ```
 #include <Arduino.h>
