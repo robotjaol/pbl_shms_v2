@@ -6,6 +6,10 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <Adafruit_SSD1306.h>
+#include <Fuzzy.h>
+
+// Fuzzy
+Fuzzy *fuzzy = new Fuzzy();
 
 // Define Floor and indicator
 #define FLOOR_1 37
@@ -42,7 +46,7 @@ float humidityState = humidity;       // Handler last value
 
 // Define Strain Gauge and Reset
 #define STRAIN_GAUGE_PIN 20
-#define RESET_BUTTON_PIN 2 // RESET All Instruments
+#define RESET_BUTTON_PIN 4 // RESET All Instruments
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 Adafruit_ADXL345_Unified adxl = Adafruit_ADXL345_Unified();
@@ -111,19 +115,19 @@ void setup()
   Wire.begin(SDA, SCL);
 
   // Reset Pin Configuration
-  pinMode(RESET_BUTTON_PIN, INPUT_PULLDOWN);
+  pinMode(RESET_BUTTON_PIN, INPUT_PULLUP);
 
   // Floor Button Configuration
-  pinMode(FLOOR_1, INPUT);
-  pinMode(FLOOR_2, INPUT);
-  pinMode(FLOOR_3, INPUT);
-  // Floor Button Indicator
-  pinMode(FLOOR_IND_1, OUTPUT);
-  pinMode(FLOOR_IND_2, OUTPUT);
-  pinMode(FLOOR_IND_3, OUTPUT);
-  digitalWrite(FLOOR_IND_1, LOW); // Normal mode Mati
-  digitalWrite(FLOOR_IND_2, LOW);
-  digitalWrite(FLOOR_IND_3, LOW);
+  // pinMode(FLOOR_1, INPUT);
+  // pinMode(FLOOR_2, INPUT);
+  // pinMode(FLOOR_3, INPUT);
+  // // Floor Button Indicator
+  // pinMode(FLOOR_IND_1, OUTPUT);
+  // pinMode(FLOOR_IND_2, OUTPUT);
+  // pinMode(FLOOR_IND_3, OUTPUT);
+  // digitalWrite(FLOOR_IND_1, LOW); // Normal mode Mati
+  // digitalWrite(FLOOR_IND_2, LOW);
+  // digitalWrite(FLOOR_IND_3, LOW);
 
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C))
   {
@@ -148,6 +152,74 @@ void setup()
   }
 
   connectToWiFi();
+}
+
+void setupFuzzy()
+{
+  // Fuzzy Input: Akselerasi
+  FuzzySet *lowAccel = new FuzzySet(0, 0, 2, 4);
+  FuzzySet *mediumAccel = new FuzzySet(3, 5, 7, 9);
+  FuzzySet *highAccel = new FuzzySet(8, 10, 15, 15);
+
+  FuzzyInput *accelInput = new FuzzyInput(1);
+  accelInput->addFuzzySet(lowAccel);
+  accelInput->addFuzzySet(mediumAccel);
+  accelInput->addFuzzySet(highAccel);
+  fuzzy->addFuzzyInput(accelInput);
+
+  // Fuzzy Output: Getaran
+  FuzzySet *noVibration = new FuzzySet(0, 0, 25, 50);
+  FuzzySet *vibration = new FuzzySet(30, 60, 100, 100);
+
+  FuzzyOutput *vibrationOutput = new FuzzyOutput(1);
+  vibrationOutput->addFuzzySet(noVibration);
+  vibrationOutput->addFuzzySet(vibration);
+  fuzzy->addFuzzyOutput(vibrationOutput);
+
+  // Fuzzy Rules
+  FuzzyRuleAntecedent *ifLowAccel = new FuzzyRuleAntecedent();
+  ifLowAccel->joinSingle(lowAccel);
+
+  FuzzyRuleConsequent *thenNoVibration = new FuzzyRuleConsequent();
+  thenNoVibration->addOutput(noVibration);
+
+  FuzzyRule *fuzzyRule1 = new FuzzyRule(1, ifLowAccel, thenNoVibration);
+  fuzzy->addFuzzyRule(fuzzyRule1);
+
+  FuzzyRuleAntecedent *ifMediumAccel = new FuzzyRuleAntecedent();
+  ifMediumAccel->joinSingle(mediumAccel);
+
+  FuzzyRuleConsequent *thenVibration = new FuzzyRuleConsequent();
+  thenVibration->addOutput(vibration);
+
+  FuzzyRule *fuzzyRule2 = new FuzzyRule(2, ifMediumAccel, thenVibration);
+  fuzzy->addFuzzyRule(fuzzyRule2);
+
+  FuzzyRuleAntecedent *ifHighAccel = new FuzzyRuleAntecedent();
+  ifHighAccel->joinSingle(highAccel);
+
+  FuzzyRule *fuzzyRule3 = new FuzzyRule(3, ifHighAccel, thenVibration);
+  fuzzy->addFuzzyRule(fuzzyRule3);
+}
+
+void fuzzyVibrationDetection(float accelX, float accelY, float accelZ)
+{
+  float accelMagnitude = sqrt(pow(accelX, 2) + pow(accelY, 2) + pow(accelZ, 2));
+  fuzzy->setInput(1, accelMagnitude);
+
+  fuzzy->fuzzify();
+  float vibrationLevel = fuzzy->defuzzify(1);
+
+  if (vibrationLevel < 30)
+  {
+    display.printf("No Vibration Detected");
+    Serial.println("No Vibration Detected");
+  }
+  else
+  {
+    display.printf("Vibration Detected!");
+    Serial.println("Vibration Detected!");
+  }
 }
 
 void readSensors(float &gyroX, float &gyroY, float &gyroZ, float &accelX, float &accelY, float &accelZ, float &strainValue)
@@ -262,8 +334,6 @@ void resetSensors(float &gyroX, float &gyroY, float &gyroZ, float &accelX, float
   gyroX = gyroY = gyroZ = accelX = accelY = accelZ = strainValue = temperature = humidity = 0;
 
   display.clearDisplay();
-  // display.setTextSize(1);
-  // display.setTextColor(SSD1306_WHITE);
   display.setCursor(0, 0);
   display.printf("Reset Success");
   Serial.println("Reset Success");
@@ -293,7 +363,7 @@ void loop()
   }
 
   // RESET mu gurung kenek jancok
-  if (digitalRead(RESET_BUTTON_PIN) == HIGH)
+  if (digitalRead(RESET_BUTTON_PIN) == LOW)
   {
     resetSensors(gyroX, gyroY, gyroZ, accelX, accelY, accelZ, strainValue, temperature, humidity);
   }
@@ -311,6 +381,7 @@ void loop()
     {
       lastSensorReadTime = currentMillis;
       readSensors(gyroX, gyroY, gyroZ, accelX, accelY, accelZ, strainValue);
+      fuzzyVibrationDetection(accelX, accelY, accelZ);
       kirimDataKeServer(gyroX, gyroY, gyroZ, accelX, accelY, accelZ, strainValue, temperatureState, humidityState); // lastLantai saya hapus
     }
 
@@ -321,12 +392,4 @@ void loop()
       updateDisplay(gyroX, gyroY, gyroZ, accelX, accelY, accelZ, strainValue, temperature, humidity); // int currentFloor saya hapus
     }
   }
-
-  // stateBtn1 = digitalRead(FLOOR_1);
-  // stateBtn2 = digitalRead(FLOOR_2);
-  // stateBtn3 = digitalRead(FLOOR_3);
-
-  // lastStateBtn1 = stateBtn1;
-  // lastStateBtn2 = stateBtn2;
-  // lastStateBtn3 = stateBtn3;
 }
