@@ -362,7 +362,6 @@ void loop()
     connectToWiFi();
   }
 
-  // RESET mu gurung kenek jancok
   if (digitalRead(RESET_BUTTON_PIN) == LOW)
   {
     resetSensors(gyroX, gyroY, gyroZ, accelX, accelY, accelZ, strainValue, temperature, humidity);
