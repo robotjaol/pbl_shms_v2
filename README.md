@@ -1,3 +1,8 @@
+[**Final Report**](https://docs.google.com/document/d/16w8R1dKRgNFMuR6cA4rU3cRvRiVt9YY4tQtcmxnG3Sw/edit?usp=sharing)
+---
+[**Manual Book**](https://itsacid-my.sharepoint.com/:w:/g/personal/2040221039_student_its_ac_id/Ec_T2ujE5tBEoSvXXyO6w1EBvuIpxTd0Dnm1i2g7A4PJvg?e=O4dVZm)
+---
+
 ![fuzzi](doc/fuzzi.png)
 
 ### Program Fuzzi + EKF Accelerometer
