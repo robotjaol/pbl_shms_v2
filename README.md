@@ -227,7 +227,9 @@ void kirimDataKeServer()
            "humidity=%.2f&temperature=%.2f&gyroX=%.2f&gyroY=%.2f&gyroZ=%.2f&accelX=%.2f&accelY=%.2f&accelZ=%.2f&strainValue=%.2f",
            humidity, temperature, accelX, accelY, accelZ, gyroX, gyroY, gyroZ, strainValue); // Swap MPU6050 (gyro) dan ADXL345 (accel)
 
-  http.begin("http://192.168.54.36/shmsv2_2/sensor.php");
+  //http.begin("http://192.168.54.36/shmsv2_2/sensor.php"); -->
+       http.begin("http://10.17.39.83/shmsv2_2/sensor.php"); //modul 2
+//   // http.begin("http://10.17.39.83/shmsv2_2/sensor.php"); // modul 1
   http.addHeader("Content-Type", "application/x-www-form-urlencoded");
 
   int httpCode = http.POST(postData);
@@ -560,7 +562,9 @@ void kirimDataKeServer()
   //          "humidity=%.2f&temperature=%.2f&accelX=%.2f&accelY=%.2f&accelZ=%.2f&gyroX=%.2f&gyroY=%.2f&gyroZ=%.2f&strainValue=%.2f",
   //          humidity, temperature, accelX, accelY, accelZ, gyroX, gyroY, gyroZ, strainValue);
 
-  // http.begin("http://192.168.54.36/shmsv2_2/sensor.php");
+  //http.begin("http://192.168.54.36/shmsv2_2/sensor.php"); -->
+       http.begin("http://10.17.39.83/shmsv2_2/sensor.php"); //modul 2
+//   // http.begin("http://10.17.39.83/shmsv2_2/sensor.php"); // modul 1
   // http.addHeader("Content-Type", "application/x-www-form-urlencoded");
 
   // int httpCode = http.POST(postData);
@@ -885,7 +889,9 @@ void kirimDataKeServer()
            "humidity=%.2f&temperature=%.2f&accelX=%.2f&accelY=%.2f&accelZ=%.2f&gyroX=%.2f&gyroY=%.2f&gyroZ=%.2f&strainValue=%.2f",
            humidity, temperature, accelX, accelY, accelZ, gyroX, gyroY, gyroZ, strainValue);
 
-  http.begin("http://192.168.54.36/shmsv2_2/sensor.php");
+  //http.begin("http://192.168.54.36/shmsv2_2/sensor.php"); -->
+       http.begin("http://10.17.39.83/shmsv2_2/sensor.php"); //modul 2
+//   // http.begin("http://10.17.39.83/shmsv2_2/sensor.php"); // modul 1
   http.addHeader("Content-Type", "application/x-www-form-urlencoded");
 
   int httpCode = http.POST(postData);
