@@ -23,15 +23,18 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 Adafruit_ADXL345_Unified adxl = Adafruit_ADXL345_Unified();
 Adafruit_MPU6050 mpu;
 DHT dht(DHTPIN, DHTTYPE);
+// Adafruit_ADXL345_Unified accelADXL = Adafruit_ADXL345_Unified(12345);
 
 float temperature = 0, humidity = 0;
 float gyroX, gyroY, gyroZ, accelX, accelY, accelZ, strainValue;
 unsigned long lastSensorReadTime = 0;
 unsigned long lastDHTReadTime = 0;
 unsigned long lastDisplayUpdateTime = 0;
-const unsigned long sensorReadInterval = 200;
-const unsigned long dhtReadInterval = 2000;
-const unsigned long displayUpdateInterval = 2000;
+
+// Interval
+#define sensorReadInterval 200
+#define dhtReadInterval 2000
+#define displayUpdateInterval  2000
 
 // Display 
 int displayIndex = 0;
@@ -106,11 +109,11 @@ float fuzzyInference(float accelValue) {
 String detectVibration(float accelValue) {
   float severity = fuzzyInference(accelValue);
   if (severity < 25.0) {
-    return "No Vibration";
+    return "No";
   } else if (severity < 75.0) {
-    return "Slight Vibration";
+    return "Slight";
   } else {
-    return "Strong Vibration";
+    return "Strong";
   }
 }
 
@@ -148,19 +151,40 @@ void readDHT()
 // Fungsi membaca data sensor MPU6050, ADXL345, dan strain gauge
 void readSensors()
 {
-  // ---== SWAP MPU6050 DAN ADXL345==----
-  sensors_event_t g, temp;
-  mpu.getEvent(nullptr, &g, &temp); //  gyro dari MPU6050
-
+  // ---== Masih belum SWAP MPU6050 DAN ADXL345==----
+  sensors_event_t a, g, temp;
+  mpu.getEvent(&a, &g, &temp); 
+  
+  //  gyro  MPU6050
   gyroX = g.gyro.x;
   gyroY = g.gyro.y;
   gyroZ = g.gyro.z;
+
+  // // MPU accelerometer
+  // accelX = a.acceleration.x;
+  // accelY = a.acceleration.y;
+  // accelZ = a.acceleration.z;
+
+  // // Kalman Filter untuk MPU6050 / ADXL345 -> BELUM
+  // accelX = kalmanFilter(a.acceleration.x, kalmanAccelX, estimatedError, processNoise, measurementNoise);
+  // accelY = kalmanFilter(a.acceleration.y, kalmanAccelY, estimatedError, processNoise, measurementNoise);
+  // accelZ = kalmanFilter(a.acceleration.z, kalmanAccelZ, estimatedError, processNoise, measurementNoise);
 
   // Baca akselerometer dari ADXL345
   sensors_event_t event;
   adxl.getEvent(&event);
 
-  // Kalman Filter untuk ADXL345
+  // gyro  ADXL345
+  // gyroX = g.gyro.x;
+  // gyroY = g.gyro.y;
+  // gyroZ = g.gyro.z;
+
+  // ADXL accelerometer
+  accelX = event.acceleration.x;
+  accelY = event.acceleration.y;
+  accelZ = event.acceleration.z;
+
+  // Kalman Filter untuk MPU6050 / [ADXL345 -> BELUM]
   accelX = kalmanFilter(event.acceleration.x, kalmanAccelX, estimatedError, processNoise, measurementNoise);
   accelY = kalmanFilter(event.acceleration.y, kalmanAccelY, estimatedError, processNoise, measurementNoise);
   accelZ = kalmanFilter(event.acceleration.z, kalmanAccelZ, estimatedError, processNoise, measurementNoise);
@@ -220,7 +244,9 @@ void kirimDataKeServer()
            "humidity=%.2f&temperature=%.2f&gyroX=%.2f&gyroY=%.2f&gyroZ=%.2f&accelX=%.2f&accelY=%.2f&accelZ=%.2f&strainValue=%.2f",
            humidity, temperature, accelX, accelY, accelZ, gyroX, gyroY, gyroZ, strainValue); // Swap MPU6050 (gyro) dan ADXL345 (accel)
 
-  http.begin("http://192.168.54.36/shmsv2_2/sensor.php");
+  //http.begin("http://192.168.54.36/shmsv2_2/sensor.php"); -->
+       http.begin("http://10.17.39.83/shmsv2_2/sensor.php"); //modul 2
+//   // http.begin("http://10.17.39.83/shmsv2_2/sensor.php"); // modul 1
   http.addHeader("Content-Type", "application/x-www-form-urlencoded");
 
   int httpCode = http.POST(postData);
