@@ -26,7 +26,7 @@ DHT dht(DHTPIN, DHTTYPE);
 // Adafruit_ADXL345_Unified accelADXL = Adafruit_ADXL345_Unified(12345);
 
 float temperature = 0, humidity = 0;
-float gyroX, gyroY, gyroZ, accelX, accelY, accelZ, strainValue;
+float strainValue;
 unsigned long lastSensorReadTime = 0;
 unsigned long lastDHTReadTime = 0;
 unsigned long lastDisplayUpdateTime = 0;
@@ -36,6 +36,17 @@ unsigned long lastDisplayUpdateTime = 0;
 #define dhtReadInterval 2000
 #define displayUpdateInterval  2000
 
+//Convertion
+// Variabel untuk menyimpan hasil kalkulasi
+float richterMagnitude = 0.0;
+float tiltAngle = 0.0;
+float angleInDegrees = 0.0;
+const float distanceToEpicenter = 500.0; // Jarak ke episenter (pusat)
+
+//WIFI
+const char* ssid = "DTEO-VOKASI";
+const char* password = "TEO123456";
+
 // Display 
 int displayIndex = 0;
 
@@ -43,20 +54,55 @@ int displayIndex = 0;
 String vibrationStatus = "Unknown";
 
 //Kalman variabel
-float kalmanAccelX = 0, kalmanAccelY = 0, kalmanAccelZ = 0;
-float kalmanGain = 0.5; // Simpla Gain
-float processNoise = 0.1, measurementNoise = 1.0; // Variabel noise
-float estimatedError = 1.0; // Variabel estimasi error
+float gyroX, gyroY, gyroZ, accelX, accelY, accelZ;
+float ADaccelX, ADaccelY, ADaccelZ;
+float dt = 0.01; // read 10ms Kalman 
 
-//Convertion
-// Variabel untuk menyimpan hasil kalkulasi
-float richterMagnitude = 0.0;
-float tiltAngle = 0.0;
-const float distanceToEpicenter = 500.0; // Jarak ke episenter (pusat)
+typedef struct {
+    float Q_angle;    // Varians proses untuk sudut
+    float Q_bias;     // Varians proses untuk bias
+    float R_measure;  // Varians pengukuran
+    float angle;      // Sudut yang dikalkulasi
+    float bias;       // Bias kalkulasi
+    float rate;       // Laju rotasi
+    float P[2][2];    // Matriks error estimasi
+} KalmanFilter;
 
-//WIFI
-const char* ssid = "DTEO-VOKASI";
-const char* password = "TEO123456";
+// Inisialisasi Kalman Filter
+KalmanFilter kalmanX = {0.001f, 0.003f, 0.03f, 0, 0, 0, {{0, 0}, {0, 0}}};
+KalmanFilter kalmanY = {0.001f, 0.003f, 0.03f, 0, 0, 0, {{0, 0}, {0, 0}}};
+
+// Get Angle KF
+float getKalmanAngle(KalmanFilter *kalman, float newAngle, float newRate, float dt) {
+    // Prediksi
+    kalman->rate = newRate - kalman->bias;
+    kalman->angle += dt * kalman->rate;
+
+    kalman->P[0][0] += dt * (dt * kalman->P[1][1] - kalman->P[0][1] - kalman->P[1][0] + kalman->Q_angle);
+    kalman->P[0][1] -= dt * kalman->P[1][1];
+    kalman->P[1][0] -= dt * kalman->P[1][1];
+    kalman->P[1][1] += kalman->Q_bias * dt;
+
+    // Update
+    float S = kalman->P[0][0] + kalman->R_measure;
+    float K[2] = {kalman->P[0][0] / S, kalman->P[1][0] / S};
+
+    float y = newAngle - kalman->angle;
+    kalman->angle += K[0] * y;
+    kalman->bias += K[1] * y;
+
+    float P00_temp = kalman->P[0][0];
+    float P01_temp = kalman->P[0][1];
+
+    kalman->P[0][0] -= K[0] * P00_temp;
+    kalman->P[0][1] -= K[0] * P01_temp;
+    kalman->P[1][0] -= K[1] * P00_temp;
+    kalman->P[1][1] -= K[1] * P01_temp;
+
+    angleInDegrees = kalman->angle * 180.0 / PI;
+    return angleInDegrees;
+}
+
 // Fungsi untuk menghubungkan ke WiFi
 void connectToWiFi()
 {
@@ -66,7 +112,7 @@ void connectToWiFi()
   while (WiFi.status() != WL_CONNECTED)
   {
     delay(500);
-    if (millis() - startTime > 2000) // Timeout 10 detik
+    if (millis() - startTime > 8000) // Timeout 8 detik
     {
       Serial.println("WiFi gagal terhubung. Restarting...");
       ESP.restart();
@@ -117,19 +163,6 @@ String detectVibration(float accelValue) {
   }
 }
 
-float kalmanFilter(float measurement, float &estimatedValue, float &errorEstimate, float processNoise, float measurementNoise) {
-  // Perhitungan gain Kalman
-  kalmanGain = errorEstimate / (errorEstimate + measurementNoise);
-  
-  // Update estimasi nilai
-  estimatedValue = estimatedValue + kalmanGain * (measurement - estimatedValue);
-
-  // Update error estimasi
-  errorEstimate = (1 - kalmanGain) * errorEstimate + fabs(estimatedValue) * processNoise;
-  
-  return estimatedValue;
-}
-
 
 // Fungsi membaca sensor DHT22
 void readDHT()
@@ -151,7 +184,6 @@ void readDHT()
 // Fungsi membaca data sensor MPU6050, ADXL345, dan strain gauge
 void readSensors()
 {
-  // ---== Masih belum SWAP MPU6050 DAN ADXL345==----
   sensors_event_t a, g, temp;
   mpu.getEvent(&a, &g, &temp); 
   
@@ -160,44 +192,39 @@ void readSensors()
   gyroY = g.gyro.y;
   gyroZ = g.gyro.z;
 
-  // // MPU accelerometer
-  // accelX = a.acceleration.x;
-  // accelY = a.acceleration.y;
-  // accelZ = a.acceleration.z;
-
-  // // Kalman Filter untuk MPU6050 / ADXL345 -> BELUM
-  // accelX = kalmanFilter(a.acceleration.x, kalmanAccelX, estimatedError, processNoise, measurementNoise);
-  // accelY = kalmanFilter(a.acceleration.y, kalmanAccelY, estimatedError, processNoise, measurementNoise);
-  // accelZ = kalmanFilter(a.acceleration.z, kalmanAccelZ, estimatedError, processNoise, measurementNoise);
+  // MPU accelerometer
+  accelX = a.acceleration.x;
+  accelY = a.acceleration.y;
+  accelZ = a.acceleration.z;
 
   // Baca akselerometer dari ADXL345
   sensors_event_t event;
   adxl.getEvent(&event);
 
-  // gyro  ADXL345
-  // gyroX = g.gyro.x;
-  // gyroY = g.gyro.y;
-  // gyroZ = g.gyro.z;
-
   // ADXL accelerometer
-  accelX = event.acceleration.x;
-  accelY = event.acceleration.y;
-  accelZ = event.acceleration.z;
+  ADaccelX = event.acceleration.x;
+  ADaccelY = event.acceleration.y;
+  ADaccelZ = event.acceleration.z;
 
-  // Kalman Filter untuk MPU6050 / [ADXL345 -> BELUM]
-  accelX = kalmanFilter(event.acceleration.x, kalmanAccelX, estimatedError, processNoise, measurementNoise);
-  accelY = kalmanFilter(event.acceleration.y, kalmanAccelY, estimatedError, processNoise, measurementNoise);
-  accelZ = kalmanFilter(event.acceleration.z, kalmanAccelZ, estimatedError, processNoise, measurementNoise);
+ // Hitung sudut dari akselerometer
+  float accelAngleX = atan2(accelY, accelZ) * 180 / PI;
+  float accelAngleY = atan2(-accelX, sqrt(accelY * accelY + accelZ * accelZ)) * 180 / PI;
+
+ // Terapkan Kalman Filter
+  float kalmanAngleX = getKalmanAngle(&kalmanX, accelAngleX, gyroX, dt);
+  float kalmanAngleY = getKalmanAngle(&kalmanY, accelAngleY, gyroY, dt);
+
+ // Debug
+  // Serial.print("Kalman Angle X: "); Serial.println(kalmanAngleX);
+  // Serial.print("Kalman Angle Y: "); Serial.println(kalmanAngleY);
 
   int rawValue = analogRead(STRAIN_GAUGE_PIN);
-  strainValue = rawValue * (100.0 / 1023.0);
+  strainValue = rawValue * (100.0 / 4095.0);
 
-  vibrationStatus = detectVibration(abs(accelZ)); // Deteksi getaran berdasarkan accelZ
+  vibrationStatus = detectVibration(abs(ADaccelZ)); // Deteksi getaran berdasarkan accelZ
   // Serial.println("Vibration Status: " + vibrationStatus);  // Debugging
-
-  // Kalkulasi Magnitudo Richter dan Kemiringan
-  tiltAngle = calculateTiltAngle(accelX, accelZ);
-  richterMagnitude = calculateRichterMagnitude(accelX, accelY, accelZ, distanceToEpicenter);
+  // Serial.println("Angle Kalman : ", angleInDegrees);
+  richterMagnitude = calculateRichterMagnitude(ADaccelX, ADaccelY, ADaccelZ, distanceToEpicenter);
 
 }
 
@@ -226,11 +253,10 @@ void updateDisplay()
 
   case 3: // Status Getaran
     display.printf("Richter Mag: %.2f\nTilt: %.2f deg\nVibration: %s", 
-                   richterMagnitude, tiltAngle, vibrationStatus.c_str());
+                   richterMagnitude, angleInDegrees, vibrationStatus.c_str());
     break;
 
   }
-
   display.display(); 
   displayIndex = (displayIndex + 1) % 4; // Ganti layar berikutnya
 }
@@ -242,10 +268,10 @@ void kirimDataKeServer()
   char postData[256];
   snprintf(postData, sizeof(postData),
            "humidity=%.2f&temperature=%.2f&gyroX=%.2f&gyroY=%.2f&gyroZ=%.2f&accelX=%.2f&accelY=%.2f&accelZ=%.2f&strainValue=%.2f",
-           humidity, temperature, accelX, accelY, accelZ, gyroX, gyroY, gyroZ, strainValue); // Swap MPU6050 (gyro) dan ADXL345 (accel)
+           humidity, temperature, ADaccelX, ADaccelY, ADaccelZ, gyroX, gyroY, gyroZ, strainValue); 
 
   //http.begin("http://192.168.54.36/shmsv2_2/sensor.php"); -->
-       http.begin("http://10.17.39.83/shmsv2_2/sensor.php"); //modul 2
+  http.begin("http://10.17.39.83/shmsv2_2/sensor.php"); //modul 2
 //   // http.begin("http://10.17.39.83/shmsv2_2/sensor.php"); // modul 1
   http.addHeader("Content-Type", "application/x-www-form-urlencoded");
 
@@ -261,11 +287,6 @@ void kirimDataKeServer()
     Serial.printf("HTTP request gagal: %s\n", http.errorToString(httpCode).c_str());
   }
   http.end();
-}
-
-// Function Wall Degree (Karena dipasang di tembok, Normal Value = 0, Ground Value = 90)
-float calculateTiltAngle(float accelX, float accelZ) {
-  return atan2(accelX, accelZ) * 180.0 / PI;
 }
 
 // Function Magnitudo Richter (estimation < 500 Meter Center)
