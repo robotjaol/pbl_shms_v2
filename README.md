@@ -17,7 +17,7 @@ https://www.semanticscholar.org/paper/A-LOW-COST-MULTI-SENSOR-SYSTEM-FOR-INVESTI
 1. sudah bisa konek ke WIFI dan inisialisasi ke wifi ditampilkan ke LCD OLED
 2. sudah bisa mengirim data accel x,y,z giro x,y,z dan temp hum dan strain value ke db
 3. Sudut yang ditampilkan ke LCD sudah hasil proses filtering dari kalman (Acc & Giro MPU)
-4. Apakah kalman filter mengambil accel dan giro dari MPU6050
+4. kalman filter mengambil accel dan giro dari MPU6050
 5. accel x,y,z yang dikirim ke db merupakan accel xyz dari ADXL
 6. giro xyz yang dikirim ke db merupakan hasil dari MPU605 
 
