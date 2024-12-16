@@ -1,9 +1,7 @@
-# Re-importing necessary libraries
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# Redefine variables for reproducibility
 np.random.seed(42)
 time = np.linspace(0, 10, 500)  # Time in seconds
 inclinometer_data = 30 * np.sin(2 * np.pi * 0.1 * time)
